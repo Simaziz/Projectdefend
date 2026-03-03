@@ -2,40 +2,46 @@
 
 import { useActionState, useState, useEffect } from "react";
 import { addCoffee } from "../actions";
-import imageCompression from 'browser-image-compression'; // Import the compressor
+import imageCompression from "browser-image-compression"; // compressor
 import { Coffee, DollarSign, Package, UploadCloud, AlertCircle, RefreshCw } from "lucide-react"; 
+import { startTransition } from "react";
 
 export default function AddCoffeePage() {
   const [state, formAction, isPending] = useActionState(addCoffee, null);
   const [mounted, setMounted] = useState(false);
   const [isCompressing, setIsCompressing] = useState(false);
 
-  useEffect(() => { setMounted(true); }, []);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
-  // NEW: Function to handle submission and compress image
+  // ✅ Handle submission with compression + startTransition
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setIsCompressing(true);
-    
+
     const formData = new FormData(event.currentTarget);
-    const imageFile = formData.get('image') as File;
+    const imageFile = formData.get("image") as File;
 
     if (imageFile && imageFile.size > 0) {
       try {
         const options = {
-          maxSizeMB: 1,          // Shrink to under 1MB
-          maxWidthOrHeight: 1024, // High enough for quality, small for speed
+          maxSizeMB: 1,
+          maxWidthOrHeight: 1024,
           useWebWorker: true
         };
         const compressedFile = await imageCompression(imageFile, options);
-        formData.set('image', compressedFile); // Replace big image with small one
+        formData.set("image", compressedFile); // replace file with compressed version
       } catch (error) {
         console.error("Compression error:", error);
       }
     }
 
-    // Now send the smaller data to your Server Action
-    formAction(formData);
+    // ✅ Wrap the formAction in startTransition to avoid console error
+    startTransition(() => {
+      formAction(formData);
+    });
+
     setIsCompressing(false);
   }
 
@@ -49,7 +55,7 @@ export default function AddCoffeePage() {
         </div>
 
         <div className="p-8">
-          {/* Change: Use onSubmit instead of action={formAction} to allow compression */}
+          {/* Use onSubmit for compression */}
           <form onSubmit={handleSubmit} noValidate className="space-y-6">
             
             {state?.error && (
@@ -60,18 +66,61 @@ export default function AddCoffeePage() {
             )}
 
             <div className="space-y-4">
-              <input name="name" placeholder="Name" className="w-full p-4 bg-stone-50 border rounded-2xl" required />
-              
+              <input
+                name="name"
+                placeholder="Name"
+                className="w-full p-4 bg-stone-50 border rounded-2xl"
+                required
+              />
+
               <div className="grid grid-cols-2 gap-4">
-                <input name="price" type="number" step="0.01" inputMode="decimal" placeholder="Price" className="w-full p-4 bg-stone-50 border rounded-2xl" required />
-                <input name="stock" type="number" inputMode="numeric" placeholder="Stock" className="w-full p-4 bg-stone-50 border rounded-2xl" required />
+                <input
+                  name="price"
+                  type="number"
+                  step="0.01"
+                  inputMode="decimal"
+                  placeholder="Price"
+                  className="w-full p-4 bg-stone-50 border rounded-2xl"
+                  required
+                />
+                <input
+                  name="stock"
+                  type="number"
+                  inputMode="numeric"
+                  placeholder="Stock"
+                  className="w-full p-4 bg-stone-50 border rounded-2xl"
+                  required
+                />
               </div>
 
               <div className="space-y-1">
                 <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-3xl cursor-pointer bg-stone-50">
                   <UploadCloud className="w-6 h-6 text-stone-400 mb-2" />
                   <span className="text-[10px] font-bold text-stone-500 uppercase">Select Image</span>
-                  <input name="image" type="file" accept="image/*" className="hidden" required />
+                  <input
+                    name="image"
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    required
+                  />
+                </label>
+              </div>
+
+              {/* Discount + Top Drink */}
+              <div className="grid grid-cols-2 gap-4">
+                <input
+                  name="discount"
+                  type="number"
+                  placeholder="Discount (%)"
+                  min="0"
+                  max="100"
+                  defaultValue={0}
+                  className="w-full p-4 bg-stone-50 border rounded-2xl"
+                />
+                <label className="flex items-center gap-2">
+                  <input type="checkbox" name="isTopDrink" />
+                  <span className="text-xs font-bold">Top Drink</span>
                 </label>
               </div>
             </div>

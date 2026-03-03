@@ -15,13 +15,21 @@ export default function ProductScroll({ products }: any) {
             className="min-w-[220px] bg-white rounded-3xl p-4 shadow-md border-orange-500 border"
           >
             <div className="relative w-full aspect-square mb-4 overflow-hidden rounded-2xl bg-stone-100">
-              <Image
-                src={coffee.image || "/images/coffee-placeholder.jpg"}
-                alt={coffee.name}
-                fill
-                className="object-cover"
-              />
-            </div>
+
+  {/* 🔴 Discount Badge */}
+  {coffee.discount > 0 && (
+    <span className="absolute top-2 left-2 bg-red-500 text-white text-xs px-2 py-1 rounded-full z-10">
+      -{coffee.discount}%
+    </span>
+  )}
+
+  <Image
+    src={coffee.image || "/images/coffee-placeholder.jpg"}
+    alt={coffee.name}
+    fill
+    className="object-cover"
+  />
+</div>
 
             <h3 className="font-bold text-stone-800">
               {coffee.name}
@@ -30,7 +38,7 @@ export default function ProductScroll({ products }: any) {
               ${coffee.price}
             </p>
             {/* Order Button Container */}
-                             <div className="w-25 z-10">
+                             <div className="">
                                <OrderButton coffee={coffee} />
                              </div>
           </div>

@@ -10,49 +10,42 @@ import { redirect } from 'next/navigation';
 // --- ADD COFFEE ACTION ---
 export async function addCoffee(prevState: any, formData: FormData) {
   await dbConnect();
-  try {
-    const file = formData.get('image') as File;
-    if (!file || file.size === 0) {
-      return { error: "Please upload an image." };
-    }
 
-    const arrayBuffer = await file.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
+  const name = formData.get("name") as string;
+  const price = parseFloat(formData.get("price") as string);
+  const stock = Number(formData.get("stock"));
+  const discount = Number(formData.get("discount")) || 0; // read discount
+  const isTopDrink = formData.get("isTopDrink") === "on" ? true : false; //  read checkbox
 
-    const uploadResponse: any = await new Promise((resolve, reject) => {
-      cloudinary.uploader.upload_stream(
-        { 
-          folder: 'cozy-cup',
-          transformation: [{ width: 600, height: 600, crop: 'fill', gravity: 'center' }] 
-        }, 
-        (error, result) => {
-          if (error) reject(error);
-          else resolve(result);
-        }
-      ).end(buffer);
-    });
+  // Upload image...
+  const file = formData.get("image") as File;
+  if (!file) return { error: "Please upload image" };
+  const arrayBuffer = await file.arrayBuffer();
+  const buffer = Buffer.from(arrayBuffer);
 
-    // parseFloat ensures decimal support (e.g., 4.50)
-    const rawPrice = parseFloat(formData.get('price') as string);
-    const formattedPrice = Math.round(rawPrice * 100) / 100; // Rounds to 2 decimal places
+  const uploadResponse: any = await new Promise((resolve, reject) => {
+    cloudinary.uploader.upload_stream(
+      { folder: "cozy-cup" },
+      (error, result) => (error ? reject(error) : resolve(result))
+    ).end(buffer);
+  });
 
-    await Product.create({
-      name: formData.get('name'),
-      price: formattedPrice,
-      image: uploadResponse.secure_url,
-      stock: Number(formData.get('stock')),
-    });
+  await Product.create({
+    name,
+    price,
+    stock,
+    discount,       // 🔥 save discount
+    isTopDrink,     // 🔥 save top drink
+    image: uploadResponse.secure_url,
+  });
+  revalidatePath("/");
+  revalidatePath("/menu");
+  
+  revalidatePath("/admin");
+  revalidatePath("/admin/products");
 
-    revalidatePath('/menu'); 
-    revalidatePath('/admin');
-    revalidatePath('/admin/products');
-  } catch (error) {
-    console.error("Upload Error:", error);
-    return { error: "Failed to add coffee. Please try again." };
-  }
-  redirect('/admin/products');
+  redirect("/admin/products");
 }
-
 // --- DELETE COFFEE ACTION ---
 export async function deleteCoffee(formData: FormData): Promise<void> {
   await dbConnect();

@@ -89,32 +89,28 @@ export default function OrderButton({ coffee }: { coffee: any }) {
       >
         {coffee.stock <= 0 ? "Out of Stock" : "Place Order"}
       </button> */}
-      <button
+ <button
   onClick={() => setShowForm(true)}
   disabled={coffee.stock <= 0}
   className="
-    relative w-full overflow-hidden
+    w-full
     py-4 px-6
     rounded-2xl
-    font-black uppercase text-[11px] tracking-[0.25em]
+    font-black uppercase
+    text-[11px] tracking-[0.25em]
     text-white
-    bg-gradient-to-br from-orange-600 via-orange-500 to-orange-700
-    shadow-[0_10px_30px_-10px_rgba(234,88,12,0.6)]
-    transition-all duration-300 ease-out
-    hover:shadow-[0_20px_40px_-15px_rgba(234,88,12,0.85)]
-    hover:scale-[1.02]
-    active:scale-[0.96]
-    disabled:from-stone-300 disabled:to-stone-400
-    disabled:shadow-none disabled:scale-100
+    bg-orange-600
+    hover:bg-orange-700
+    active:scale-95
+    transition-all duration-200
+    shadow-lg
+    disabled:bg-stone-300
+    disabled:text-stone-500
+    disabled:shadow-none
     disabled:cursor-not-allowed
   "
 >
-  {/* Shine sweep effect */}
-  <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/25 to-transparent -translate-x-full hover:translate-x-full transition-transform duration-1000" />
-
-  <span className="relative z-10">
-    {coffee.stock <= 0 ? "Out of Stock" : "Place Order"}
-  </span>
+  {coffee.stock <= 0 ? "Out of Stock" : "Place Order"}
 </button>
 
       <AnimatePresence>
@@ -145,7 +141,7 @@ export default function OrderButton({ coffee }: { coffee: any }) {
                 </div>
               </div>
 
-              {/* Scrollable Form Body */}
+              {/* Scrollable Form Body */} 
               <div className="flex-1 overflow-y-auto px-8 py-4 space-y-6">
                 <form id="order-form" onSubmit={handleOrder} className="space-y-6">
                   {/* Summary Card */}
