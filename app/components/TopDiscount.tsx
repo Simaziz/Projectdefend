@@ -1,5 +1,5 @@
 "use client";
-
+import AddToCartButton from "./AddToCartButton";
 import { useState } from "react";
 import ProductScroll from "./ProductScroll";
 import { Coffee } from "../types";

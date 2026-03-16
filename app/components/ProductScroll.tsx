@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import OrderButton from "./OrderButton";
+import AddToCartButton from "./AddToCartButton"; // ✅ swap this
 
 export default function ProductScroll({ products, wrap = false }: { products: any[], wrap?: boolean }) {
   return (
@@ -32,8 +32,8 @@ export default function ProductScroll({ products, wrap = false }: { products: an
             <h3 className="font-bold text-stone-800 text-[11px] sm:text-base truncate">{coffee.name}</h3>
             <p className="text-orange-900 font-semibold text-[11px] sm:text-base">${coffee.price}</p>
             <div className="scale-75 sm:scale-100 origin-left">
-  <OrderButton coffee={coffee} />
-</div>
+              <AddToCartButton coffee={coffee} /> {/* ✅ swap this */}
+            </div>
           </div>
         ))}
       </div>

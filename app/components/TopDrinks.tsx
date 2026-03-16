@@ -2,7 +2,7 @@
 
 import { useRef } from "react";
 import Image from "next/image";
-import OrderButton from "./OrderButton";
+import AddToCartButton from "./AddToCartButton";
 import { Coffee } from "../types";
 
 export default function TopDrink({ products }: { products: Coffee[] }) {
@@ -62,7 +62,7 @@ export default function TopDrink({ products }: { products: Coffee[] }) {
               <h3 className="font-bold text-stone-800 text-xs sm:text-sm truncate">{coffee.name}</h3>
               <p className="text-orange-900 font-semibold text-xs sm:text-sm">${coffee.price}</p>
               <div className="scale-75 sm:scale-100 origin-left mt-1">
-                <OrderButton coffee={coffee} />
+                <AddToCartButton coffee={coffee} />
               </div>
             </div>
           ))}
