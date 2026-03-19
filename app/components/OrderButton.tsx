@@ -6,7 +6,7 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import toast, { Toaster } from "react-hot-toast";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Plus, Minus, Coffee, ShieldCheck, CreditCard } from "lucide-react";
+import { X, Plus, Minus, Coffee, ShieldCheck, CreditCard, MapPin, Loader2 } from "lucide-react";
 
 export default function OrderButton({ coffee }: { coffee: any }) {
   const { data: session, status } = useSession();
@@ -20,9 +20,12 @@ export default function OrderButton({ coffee }: { coffee: any }) {
 
   const totalPrice = coffee.price * quantity;
 
+  useEffect(() => { setMounted(true); }, []);
+
   useEffect(() => {
-    setMounted(true);
-  }, []);
+    document.body.style.overflow = showForm ? "hidden" : "unset";
+    return () => { document.body.style.overflow = "unset"; };
+  }, [showForm]);
 
   const fetchCurrentLocation = () => {
     if (!navigator.geolocation) return toast.error("GPS not supported");
@@ -34,29 +37,17 @@ export default function OrderButton({ coffee }: { coffee: any }) {
           const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`);
           const data = await res.json();
           setFormData((prev) => ({ ...prev, address: data.display_name || `Lat: ${latitude}, Lon: ${longitude}` }));
-          toast.success("Location synced!");
-        } catch (err) {
+          toast.success("📍 Location synced!");
+        } catch {
           toast.error("GPS active, but address failed.");
         } finally {
           setLocating(false);
         }
       },
-      () => {
-        setLocating(false);
-        toast.error("Location access denied.");
-      },
+      () => { setLocating(false); toast.error("Location access denied."); },
       { enableHighAccuracy: true }
     );
   };
-
-  useEffect(() => {
-    if (showForm) {
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "unset";
-    }
-    return () => { document.body.style.overflow = "unset"; };
-  }, [showForm]);
 
   const handleOrder = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -64,47 +55,39 @@ export default function OrderButton({ coffee }: { coffee: any }) {
     const loadingToast = toast.loading("Sending to kitchen...");
 
     try {
+      // ── Send as items[] array so admin sees it as one package ──────────────
       const res = await fetch("/api/orders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          coffeeId: coffee._id,
-          address: formData.address,
-          phone: formData.phone,
-          note: formData.note,
-          quantity
+          customerName: session?.user?.name || session?.user?.email || "Guest",
+          address:      formData.address,
+          phone:        formData.phone,
+          note:         formData.note,
+          items: [{ coffeeId: coffee._id, quantity }],
         }),
       });
 
-      if (!res.ok) throw new Error();
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Order failed");
+      }
 
       setShowForm(false);
       setQuantity(1);
+      setFormData({ address: "", phone: "", note: "" });
 
-      // Show success toast at top via portal after modal closes
       setTimeout(() => {
         toast.success("🎉 Order placed! We're brewing your drink!", {
           id: loadingToast,
           duration: 4000,
-          style: {
-            background: "#1c1917",
-            color: "#fafaf9",
-            borderRadius: "1.25rem",
-            fontSize: "14px",
-            fontWeight: "700",
-            padding: "14px 24px",
-            boxShadow: "0 10px 40px rgba(0,0,0,0.3)",
-            border: "1px solid rgba(234,88,12,0.4)",
-          },
-          iconTheme: {
-            primary: "#ea580c",
-            secondary: "#fff",
-          },
+          style: { background: "#1c1917", color: "#fafaf9", borderRadius: "1.25rem", fontSize: "14px", fontWeight: "700", padding: "14px 24px", border: "1px solid rgba(234,88,12,0.4)" },
+          iconTheme: { primary: "#ea580c", secondary: "#fff" },
         });
       }, 300);
 
-    } catch (error) {
-      toast.error("Order failed.", { id: loadingToast });
+    } catch (err: any) {
+      toast.error(err.message || "Order failed.", { id: loadingToast });
     } finally {
       setLoading(false);
     }
@@ -112,79 +95,46 @@ export default function OrderButton({ coffee }: { coffee: any }) {
 
   return (
     <>
-      {/* Top-center Toaster just for success — rendered via portal above everything */}
       {mounted && createPortal(
         <Toaster
           position="top-center"
           containerStyle={{ zIndex: 99999, top: 24 }}
           toastOptions={{
-            style: {
-              background: "#1c1917",
-              color: "#fafaf9",
-              borderRadius: "1.25rem",
-              fontSize: "14px",
-              fontWeight: "700",
-              padding: "14px 24px",
-              boxShadow: "0 10px 40px rgba(0,0,0,0.3)",
-              border: "1px solid rgba(234,88,12,0.4)",
-            },
+            style: { background: "#1c1917", color: "#fafaf9", borderRadius: "1.25rem", fontSize: "14px", fontWeight: "700", padding: "14px 24px", border: "1px solid rgba(234,88,12,0.4)" },
           }}
         />,
         document.body
       )}
 
+      {/* Trigger Button */}
       <button
-      onClick={() => {
-  if (status === "loading") return; // wait for session to load
-  if (!session) {
-    toast.error("Please login to place an order!", {
-      icon: "🔒",
-      style: { fontWeight: "bold", fontSize: "14px" },
-    });
-    setTimeout(() => router.push("/login"), 1500);
-    return;
-  }
-  setShowForm(true);
-
+        onClick={() => {
+          if (status === "loading") return;
+          if (!session) {
+            toast.error("Please login to place an order!", { icon: "🔒" });
+            setTimeout(() => router.push("/login"), 1500);
+            return;
+          }
+          setShowForm(true);
         }}
         disabled={coffee.stock <= 0 || status === "loading"}
-        className="
-          w-full
-          py-2 sm:py-4 px-3 sm:px-6
-          rounded-2xl
-          font-black uppercase
-          text-[9px] sm:text-[11px] tracking-[0.15em] sm:tracking-[0.25em]
-          text-white
-          bg-orange-600
-          hover:bg-orange-700
-          active:scale-95
-          transition-all duration-200
-          shadow-lg
-          disabled:bg-stone-300
-          disabled:text-stone-500
-          disabled:shadow-none
-          disabled:cursor-not-allowed
-        "
+        className="w-full py-2 sm:py-4 px-3 sm:px-6 rounded-2xl font-black uppercase text-[9px] sm:text-[11px] tracking-[0.15em] sm:tracking-[0.25em] text-white bg-orange-600 hover:bg-orange-700 active:scale-95 transition-all duration-200 shadow-lg disabled:bg-stone-300 disabled:text-stone-500 disabled:shadow-none disabled:cursor-not-allowed"
       >
         {coffee.stock <= 0 ? "Out of Stock" : "Place Order"}
       </button>
 
+      {/* Order Modal */}
       {mounted && createPortal(
         <AnimatePresence>
           {showForm && (
             <div className="fixed inset-0 z-[9999] flex items-end md:items-center justify-center">
               <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                 onClick={() => setShowForm(false)}
                 className="absolute inset-0 bg-stone-950/40 backdrop-blur-md"
               />
-
               <motion.div
-                initial={{ y: "100%", opacity: 0.5 }}
-                animate={{ y: 0, opacity: 1 }}
-                exit={{ y: "100%", opacity: 0 }}
+                initial={{ y: "100%", opacity: 0.5 }} animate={{ y: 0, opacity: 1 }} exit={{ y: "100%", opacity: 0 }}
                 transition={{ type: "spring", damping: 30, stiffness: 300 }}
                 className="bg-[#fdfcfb] w-full max-w-lg rounded-t-[3rem] md:rounded-[3rem] shadow-2xl relative z-10 flex flex-col max-h-[92vh] overflow-hidden"
               >
@@ -198,10 +148,11 @@ export default function OrderButton({ coffee }: { coffee: any }) {
                   </div>
                 </div>
 
-                {/* Scrollable Form Body */}
+                {/* Form Body */}
                 <div className="flex-1 overflow-y-auto px-8 py-4 space-y-6">
                   <form id="order-form" onSubmit={handleOrder} className="space-y-6">
-                    {/* Summary Card */}
+
+                    {/* Summary */}
                     <div className="flex items-center justify-between p-4 bg-stone-50 rounded-3xl border border-stone-100">
                       <div className="flex items-center gap-3">
                         <Coffee className="text-orange-600" size={20} />
@@ -214,57 +165,51 @@ export default function OrderButton({ coffee }: { coffee: any }) {
                       </div>
                     </div>
 
-                    {/* Form Inputs */}
+                    {/* Inputs */}
                     <div className="space-y-4">
                       <div className="space-y-2">
                         <label className="text-[9px] font-black uppercase text-stone-400 tracking-widest ml-1">Phone Number</label>
                         <input
-                          required
-                          type="tel"
-                          placeholder="+123 456 789"
+                          required type="tel" placeholder="+123 456 789"
                           className="w-full bg-white border-stone-100 border-2 rounded-2xl p-4 text-sm font-bold outline-none focus:border-orange-600/30 transition-all shadow-sm"
-                          onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                          value={formData.phone}
+                          onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                         />
                       </div>
-
                       <div className="space-y-2">
                         <div className="flex justify-between px-1">
                           <label className="text-[9px] font-black uppercase text-stone-400 tracking-widest">Delivery Address</label>
-                          <button type="button" onClick={fetchCurrentLocation} className="text-[9px] font-black text-orange-600 uppercase tracking-widest">
-                            {locating ? "..." : "Use GPS"}
+                          <button type="button" onClick={fetchCurrentLocation} disabled={locating}
+                            className="flex items-center gap-1 text-[9px] font-black text-orange-600 uppercase tracking-widest disabled:opacity-50">
+                            {locating ? <><Loader2 size={9} className="animate-spin" />Locating...</> : <><MapPin size={9} />Use GPS</>}
                           </button>
                         </div>
                         <textarea
-                          required
-                          value={formData.address}
-                          placeholder="Street, Floor..."
+                          required value={formData.address} placeholder="Street, Floor..."
                           className="w-full bg-white border-stone-100 border-2 rounded-2xl p-4 text-xs font-semibold h-24 resize-none outline-none focus:border-orange-600/30 transition-all shadow-sm"
-                          onChange={(e) => setFormData({...formData, address: e.target.value})}
+                          onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                         />
                       </div>
-
                       <div className="space-y-2">
                         <label className="text-[9px] font-black uppercase text-stone-400 tracking-widest ml-1">Note for Barista</label>
                         <input
-                          type="text"
-                          placeholder="Extra hot, etc..."
+                          type="text" placeholder="Extra hot, etc..."
                           className="w-full bg-white border-stone-100 border-2 rounded-2xl p-4 text-xs font-medium outline-none focus:border-orange-600/30 shadow-sm"
-                          onChange={(e) => setFormData({...formData, note: e.target.value})}
+                          value={formData.note}
+                          onChange={(e) => setFormData({ ...formData, note: e.target.value })}
                         />
                       </div>
                     </div>
                   </form>
                 </div>
 
-                {/* Fixed Bottom Footer */}
+                {/* Footer */}
                 <div className="p-8 pt-4 bg-white border-t border-stone-50 shrink-0">
                   <button
-                    form="order-form"
-                    type="submit"
-                    disabled={loading || locating}
-                    className="w-full py-5 bg-stone-900 text-white rounded-[2rem] font-black uppercase text-[10px] tracking-[0.3em] flex items-center justify-between px-10 hover:bg-black transition-all active:scale-[0.98]"
+                    form="order-form" type="submit" disabled={loading || locating}
+                    className="w-full py-5 bg-stone-900 text-white rounded-[2rem] font-black uppercase text-[10px] tracking-[0.3em] flex items-center justify-between px-10 hover:bg-black transition-all active:scale-[0.98] disabled:opacity-60"
                   >
-                    <span>Confirm Order</span>
+                    <span>{loading ? "Placing Order..." : "Confirm Order"}</span>
                     <span className="text-orange-400 text-base font-serif italic">${totalPrice.toFixed(2)}</span>
                   </button>
                   <div className="flex justify-center gap-4 mt-5 opacity-30 text-[8px] font-black uppercase tracking-widest">

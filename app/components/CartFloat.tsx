@@ -1,10 +1,10 @@
 "use client"
 import { useCartStore } from "@/app/store/cartStore"
 import { ShoppingBag } from "lucide-react"
-import { motion, AnimatePresence } from "framer-motion"
+import { motion } from "framer-motion"
 
 export default function CartFloat() {
-  const { items, openCart } = useCartStore()
+  const { items, openCart, total } = useCartStore() // ✅ add total
   const totalItems = items.reduce((sum, i) => sum + i.quantity, 0)
 
   if (totalItems === 0) return null
@@ -23,6 +23,10 @@ export default function CartFloat() {
       <span className="font-black text-sm uppercase tracking-wider">Cart</span>
       <span className="bg-orange-500 text-white text-xs font-black rounded-full w-6 h-6 flex items-center justify-center">
         {totalItems}
+      </span>
+      {/* ✅ total price */}
+      <span className="border-l border-white/20 pl-3 text-orange-400 font-serif italic text-base">
+        ${total().toFixed(2)}
       </span>
     </motion.button>
   )

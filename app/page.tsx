@@ -3,8 +3,8 @@ import { getProducts } from "@/lib/getProducts";
 import ProductScroll from "../app/components/ProductScroll";
 import TopDrink from "../app/components/TopDrinks";
 import TopDiscount from "../app/components/TopDiscount";
+import { ShopStatusBanner } from "./components/ShopStatusBanner";
 import { Coffee } from "../app/types";
-// import { Link } from "lucide-react";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
@@ -12,10 +12,14 @@ export const dynamic = "force-dynamic";
 export default async function HomePage() {
   const coffees: Coffee[] = await getProducts(50);
 
-  console.log("All coffees:", coffees);
-
   return (
     <div className="flex flex-col">
+
+      {/* Shop Status — compact pill */}
+      <div className="px-4 pt-4">
+        <ShopStatusBanner />
+      </div>
+
       {/* Poster */}
       <div className="relative flex-1 pt-70 h-[300px]">
         <Image
@@ -30,13 +34,14 @@ export default async function HomePage() {
       <TopDrink products={coffees} />
 
       {/* Top Discount */}
-      <div className="grid justify-center "
+      <div
+        className="grid justify-center"
         style={{
           background: "linear-gradient(135deg, #1a0a00 0%, #2d1200 40%, #1a0800 70%, #0d0400 100%)",
-        }}>
+        }}
+      >
         <TopDiscount products={coffees} />
       </div>
-
 
       {/* All Menu */}
       <div className="p-6 bg-[#fcfaf8]">

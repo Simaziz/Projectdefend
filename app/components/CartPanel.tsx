@@ -1,86 +1,105 @@
-"use client"
-import { useCartStore } from "@/app/store/cartStore"
-import { motion, AnimatePresence } from "framer-motion"
-import { X, Plus, Minus, Trash2, ShoppingBag, ShieldCheck, CreditCard } from "lucide-react"
-import Image from "next/image"
-import { useState } from "react"
-import { useSession } from "next-auth/react"
-import { useRouter } from "next/navigation"
-import toast from "react-hot-toast"
+"use client";
+import { useCartStore } from "@/app/store/cartStore";
+import { motion, AnimatePresence } from "framer-motion";
+import { X, Plus, Minus, Trash2, ShoppingBag, ShieldCheck, CreditCard, MapPin, Loader2 } from "lucide-react";
+import Image from "next/image";
+import { useState } from "react";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import toast from "react-hot-toast";
 
 export default function CartPanel() {
-  const { isOpen, closeCart, items, updateQuantity, removeItem, clearCart, total } = useCartStore()
-  const { data: session } = useSession()
-  const router = useRouter()
-  const [loading, setLoading] = useState(false)
-  const [formData, setFormData] = useState({ address: "", phone: "", note: "" })
+  const { isOpen, closeCart, items, updateQuantity, removeItem, clearCart, total } = useCartStore();
+  const { data: session } = useSession();
+  const router = useRouter();
+  const [loading, setLoading] = useState(false);
+  const [locating, setLocating] = useState(false);
+  const [formData, setFormData] = useState({ address: "", phone: "", note: "" });
+
+  const fetchCurrentLocation = () => {
+    if (!navigator.geolocation) return toast.error("GPS not supported on this device");
+    setLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const { latitude, longitude } = position.coords;
+        try {
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`
+          );
+          const data = await res.json();
+          setFormData((prev) => ({ ...prev, address: data.display_name || `Lat: ${latitude}, Lon: ${longitude}` }));
+          toast.success("📍 Location synced!", {
+            style: { background: "#1c1917", color: "#fafaf9", borderRadius: "1.25rem", fontSize: "13px", fontWeight: "700", border: "1px solid rgba(234,88,12,0.4)" },
+          });
+        } catch {
+          toast.error("GPS active, but address lookup failed.");
+        } finally {
+          setLocating(false);
+        }
+      },
+      () => { setLocating(false); toast.error("Location access denied."); },
+      { enableHighAccuracy: true }
+    );
+  };
 
   const handleCheckout = async (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
     if (!session) {
-      toast.error("Please login to place an order!")
-      setTimeout(() => router.push("/login"), 1500)
-      return
+      toast.error("Please login to place an order!");
+      setTimeout(() => router.push("/login"), 1500);
+      return;
     }
-    setLoading(true)
-    const loadingToast = toast.loading("Sending to kitchen...")
+    setLoading(true);
+    const loadingToast = toast.loading("Sending to kitchen...");
+
     try {
-      // Place one order per item
-      await Promise.all(
-        items.map((item) =>
-          fetch("/api/orders", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              coffeeId: item._id,
-              quantity: item.quantity,
-              address: formData.address,
-              phone: formData.phone,
-              note: formData.note,
-            }),
-          })
-        )
-      )
-      clearCart()
-      closeCart()
+      // ── ONE request with ALL items ──────────────────────────────────────────
+      const res = await fetch("/api/orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          customerName: session.user?.name || session.user?.email || "Guest",
+          address:      formData.address,
+          phone:        formData.phone,
+          note:         formData.note,
+          items:        items.map((item) => ({
+            coffeeId: item._id,
+            quantity: item.quantity,
+          })),
+        }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Order failed");
+      }
+
+      clearCart();
+      closeCart();
       toast.success("🎉 Order placed! We're brewing your drinks!", {
         id: loadingToast,
         duration: 4000,
-        style: {
-          background: "#1c1917",
-          color: "#fafaf9",
-          borderRadius: "1.25rem",
-          fontSize: "14px",
-          fontWeight: "700",
-          border: "1px solid rgba(234,88,12,0.4)",
-        },
+        style: { background: "#1c1917", color: "#fafaf9", borderRadius: "1.25rem", fontSize: "14px", fontWeight: "700", border: "1px solid rgba(234,88,12,0.4)" },
         iconTheme: { primary: "#ea580c", secondary: "#fff" },
-      })
-    } catch {
-      toast.error("Order failed.", { id: loadingToast })
+      });
+    } catch (err: any) {
+      toast.error(err.message || "Order failed.", { id: loadingToast });
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   return (
     <AnimatePresence>
       {isOpen && (
         <div className="fixed inset-0 z-[9999] flex items-end md:items-center justify-end">
-          {/* Backdrop */}
           <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             onClick={closeCart}
             className="absolute inset-0 bg-stone-950/40 backdrop-blur-md"
           />
-
-          {/* Panel */}
           <motion.div
-            initial={{ x: "100%" }}
-            animate={{ x: 0 }}
-            exit={{ x: "100%" }}
+            initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }}
             transition={{ type: "spring", damping: 30, stiffness: 300 }}
             className="relative z-10 w-full max-w-md h-full bg-[#fdfcfb] shadow-2xl flex flex-col"
           >
@@ -136,22 +155,38 @@ export default function CartPanel() {
                   <form id="cart-form" onSubmit={handleCheckout} className="space-y-4 pt-4 border-t border-stone-100">
                     <p className="text-[9px] font-black uppercase tracking-widest text-stone-400">Delivery Details</p>
                     <input
-                      required
-                      type="tel"
-                      placeholder="Phone number"
+                      required type="tel" placeholder="Phone number"
                       className="w-full bg-white border-2 border-stone-100 rounded-2xl p-4 text-sm font-bold outline-none focus:border-orange-600/30 transition-all"
+                      value={formData.phone}
                       onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                     />
-                    <textarea
-                      required
-                      placeholder="Delivery address"
-                      className="w-full bg-white border-2 border-stone-100 rounded-2xl p-4 text-xs font-semibold h-20 resize-none outline-none focus:border-orange-600/30 transition-all"
-                      onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                    />
+                    <div className="relative">
+                      <div className="flex justify-between items-center mb-1.5 px-1">
+                        <label className="text-[9px] font-black uppercase text-stone-400 tracking-widest">Delivery Address</label>
+                        <button
+                          type="button" onClick={fetchCurrentLocation} disabled={locating}
+                          className="flex items-center gap-1.5 text-[9px] font-black text-orange-600 uppercase tracking-widest hover:text-orange-700 transition-colors disabled:opacity-50"
+                        >
+                          {locating ? <><Loader2 size={10} className="animate-spin" />Locating...</> : <><MapPin size={10} />Use My Location</>}
+                        </button>
+                      </div>
+                      <textarea
+                        required placeholder="Street, Floor, Building..."
+                        value={formData.address}
+                        className="w-full bg-white border-2 border-stone-100 rounded-2xl p-4 text-xs font-semibold h-24 resize-none outline-none focus:border-orange-600/30 transition-all"
+                        onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                      />
+                      {formData.address && (
+                        <div className="absolute bottom-3 right-3 flex items-center gap-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                          <span className="text-[8px] font-black uppercase text-emerald-500 tracking-widest">Live</span>
+                        </div>
+                      )}
+                    </div>
                     <input
-                      type="text"
-                      placeholder="Note for barista (optional)"
+                      type="text" placeholder="Note for barista (optional)"
                       className="w-full bg-white border-2 border-stone-100 rounded-2xl p-4 text-xs outline-none focus:border-orange-600/30 transition-all"
+                      value={formData.note}
                       onChange={(e) => setFormData({ ...formData, note: e.target.value })}
                     />
                   </form>
@@ -163,12 +198,11 @@ export default function CartPanel() {
             {items.length > 0 && (
               <div className="p-8 pt-4 border-t border-stone-100 shrink-0 bg-white">
                 <button
-                  form="cart-form"
-                  type="submit"
-                  disabled={loading}
+                  form="cart-form" type="submit"
+                  disabled={loading || locating}
                   className="w-full py-5 bg-stone-900 text-white rounded-[2rem] font-black uppercase text-[10px] tracking-[0.3em] flex items-center justify-between px-10 hover:bg-black transition-all active:scale-[0.98] disabled:opacity-50"
                 >
-                  <span>Confirm Order</span>
+                  <span>{loading ? "Placing Order..." : "Confirm Order"}</span>
                   <span className="text-orange-400 text-base font-serif italic">${total().toFixed(2)}</span>
                 </button>
                 <div className="flex justify-center gap-4 mt-4 opacity-30 text-[8px] font-black uppercase tracking-widest">
@@ -181,5 +215,5 @@ export default function CartPanel() {
         </div>
       )}
     </AnimatePresence>
-  )
+  );
 }
