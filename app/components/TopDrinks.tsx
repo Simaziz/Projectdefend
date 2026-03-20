@@ -9,8 +9,6 @@ export default function TopDrink({ products }: { products: Coffee[] }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const topDrinks = products.filter(p => p.isTopDrink);
 
-  console.log("Top drinks:", topDrinks);
-
   if (topDrinks.length === 0) return <p className="text-center">No top drinks yet.</p>;
 
   const scroll = (direction: "left" | "right") => {
@@ -29,7 +27,6 @@ export default function TopDrink({ products }: { products: Coffee[] }) {
         <span className="absolute -bottom-2 left-1/2 w-0 h-1 bg-orange-500 transition-all duration-500 group-hover:w-1/2 group-hover:left-1/4 rounded-full"></span>
       </h2>
 
-      {/* Container */}
       <div className="relative w-full sm:w-[85%] lg:w-[70%] px-4 sm:px-0">
 
         {/* Left Button */}
@@ -46,26 +43,61 @@ export default function TopDrink({ products }: { products: Coffee[] }) {
           className="flex gap-3 sm:gap-4 overflow-x-auto pb-4"
           style={{ scrollbarWidth: "none" }}
         >
-          {topDrinks.map((coffee) => (
-            <div
-              key={coffee._id}
-              className="min-w-[130px] max-w-[130px] sm:min-w-[160px] sm:max-w-[160px] flex-shrink-0 bg-white rounded-3xl p-2 sm:p-3 shadow-md border border-orange-500"
-            >
-              <div className="relative w-full aspect-video sm:aspect-square mb-2 sm:mb-3 overflow-hidden rounded-2xl bg-stone-100">
-                <Image
-                  src={coffee.image || "/images/coffee-placeholder.jpg"}
-                  alt={coffee.name}
-                  fill
-                  className="object-cover"
-                />
+          {topDrinks.map((coffee) => {
+            const discount = coffee.discount ?? 0;
+            const hasDiscount = discount > 0;
+            const discountedPrice = hasDiscount
+              ? (coffee.price * (1 - discount / 100)).toFixed(2)
+              : null;
+
+            return (
+              <div
+                key={coffee._id}
+                className="relative min-w-[130px] max-w-[130px] sm:min-w-[160px] sm:max-w-[160px] flex-shrink-0 bg-white rounded-3xl p-2 sm:p-3 shadow-md border border-orange-500"
+              >
+                {/* Discount Badge */}
+                {hasDiscount && (
+                  <div className="absolute top-2 left-2 z-10 bg-red-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full shadow-md tracking-wide">
+                    -{discount}%
+                  </div>
+                )}
+
+                {/* Image */}
+                <div className="relative w-full aspect-video sm:aspect-square mb-2 sm:mb-3 overflow-hidden rounded-2xl bg-stone-100">
+                  <Image
+                    src={coffee.image || "/images/coffee-placeholder.jpg"}
+                    alt={coffee.name}
+                    fill
+                    className="object-cover"
+                  />
+                </div>
+
+                {/* Name */}
+                <h3 className="font-bold text-stone-800 text-xs sm:text-sm truncate">{coffee.name}</h3>
+
+                {/* Price */}
+                {hasDiscount ? (
+                  <div className="flex flex-col mt-0.5">
+                    <span className="text-stone-400 line-through text-[10px] sm:text-xs">
+                      ${coffee.price.toFixed(2)}
+                    </span>
+                    <span className="text-red-500 font-bold text-xs sm:text-sm">
+                      ${discountedPrice}
+                    </span>
+                  </div>
+                ) : (
+                  <p className="text-orange-900 font-semibold text-xs sm:text-sm mt-0.5">
+                    ${coffee.price.toFixed(2)}
+                  </p>
+                )}
+
+                {/* Add to Cart */}
+                <div className="scale-75 sm:scale-100 origin-left mt-1">
+                  <AddToCartButton coffee={coffee} />
+                </div>
               </div>
-              <h3 className="font-bold text-stone-800 text-xs sm:text-sm truncate">{coffee.name}</h3>
-              <p className="text-orange-900 font-semibold text-xs sm:text-sm">${coffee.price}</p>
-              <div className="scale-75 sm:scale-100 origin-left mt-1">
-                <AddToCartButton coffee={coffee} />
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         {/* Right Button */}
