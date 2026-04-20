@@ -1,74 +1,113 @@
 "use client";
 
-import { useState } from "react";
-import { LogOut, ChevronDown, ShoppingCart, PlusCircle } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
+import { useSession } from "next-auth/react";
 import { signOut } from "next-auth/react";
+import Image from "next/image";
 import Link from "next/link";
 
-export default function UserMenu({ user }: { user: any }) {
-  const [isOpen, setIsOpen] = useState(false);
-  const displayName = user.name || user.email.split("@")[0];
+type UserMenuProps = {
+  user?: {
+    name?: string | null;
+    email?: string | null;
+    image?: string | null;
+    role?: string;
+    id?: string;
+  };
+};
+
+export default function UserMenu({ user: propUser }: UserMenuProps = {}) {
+  const { data: session } = useSession();
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  // Use prop if passed (from server component), fallback to client session
+  // const user = propUser ?? session?.user;
+  const user = session?.user ?? propUser;
+
+  // Close on outside click
+  useEffect(() => {
+    function handle(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handle);
+    return () => document.removeEventListener("mousedown", handle);
+  }, []);
 
   return (
-    <div className="relative">
+    <div className="relative" ref={ref}>
+      {/* Avatar trigger */}
       <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-1.5 bg-orange-950/30 px-2.5 py-1.5 rounded-lg border border-orange-800/30"
+        onClick={() => setOpen((o) => !o)}
+        className="w-9 h-9 rounded-xl overflow-hidden border-2 border-white/20 hover:border-orange-400 transition-all duration-200 bg-white/10 flex items-center justify-center"
       >
-        <div className="w-6 h-6 rounded-full bg-orange-700 flex items-center justify-center text-[10px] font-bold text-white">
-          {displayName.charAt(0).toUpperCase()}
-        </div>
-        <span className="text-xs font-bold hidden md:block text-white">
-          {user.role === "admin" ? "Admin" : displayName}
-        </span>
-        <ChevronDown size={11} className={`text-white transition-transform ${isOpen ? "rotate-180" : ""}`} />
+        {user?.image ? (
+          <Image
+            src={user.image}
+            alt="avatar"
+            width={36}
+            height={36}
+            className="object-cover w-full h-full"
+          />
+        ) : (
+          <span className="text-base">👤</span>
+        )}
       </button>
 
-      {isOpen && (
-        <>
-          <div className="fixed inset-0 z-10" onClick={() => setIsOpen(false)} />
-
-          <div className="absolute right-0 mt-2 w-44 bg-white rounded-xl shadow-xl border border-stone-100 py-1 z-50 animate-in fade-in zoom-in-95 duration-200">
-            <div className="px-3 py-2 border-b border-stone-50">
-              <p className="text-[8px] font-black uppercase text-stone-400 tracking-widest">Account</p>
-              <p className="text-[11px] font-bold text-stone-900 truncate mt-0.5">{user.email}</p>
-            </div>
-
-            {user.role === "admin" && (
-              <div className="p-1 border-b border-stone-50">
-                <p className="px-2 pt-1 pb-1 text-[8px] font-black uppercase text-orange-600 tracking-widest">Management</p>
-
-                <Link
-                  href="/admin"
-                  onClick={() => setIsOpen(false)}
-                  className="flex items-center gap-2 px-2 py-1.5 text-[11px] font-bold text-stone-700 hover:bg-orange-50 rounded-lg"
-                >
-                  <ShoppingCart size={12} className="text-orange-600" />
-                  Orders
-                </Link>
-
-                <Link
-                  href="/admin/products"
-                  onClick={() => setIsOpen(false)}
-                  className="flex items-center gap-2 px-2 py-1.5 text-[11px] font-bold text-stone-700 hover:bg-orange-50 rounded-lg"
-                >
-                  <PlusCircle size={12} className="text-orange-600" />
-                  Inventory
-                </Link>
-              </div>
-            )}
-
-            <div className="p-1">
-              <button
-                onClick={() => signOut()}
-                className="w-full flex items-center gap-2 px-2 py-1.5 text-[11px] font-bold text-red-600 hover:bg-red-50 rounded-lg"
-              >
-                <LogOut size={12} />
-                Sign Out
-              </button>
-            </div>
+      {/* Dropdown */}
+      {open && (
+        <div className="absolute right-0 top-12 w-56 rounded-2xl border border-white/10 bg-orange-950/95 backdrop-blur-xl shadow-[0_20px_60px_-10px_rgba(0,0,0,0.6)] overflow-hidden z-[300]">
+          {/* User info */}
+          <div className="px-4 py-3.5 border-b border-white/10">
+            {/* <p className="text-sm font-semibold text-white truncate">{user?.name ?? "User"}</p>
+            <p className="text-[10px] text-orange-200/40 truncate mt-0.5">{user?.email}</p> */}
+            {user?.name && (
+  <p className="text-sm font-semibold text-white truncate">{user.name}</p>
+)}
+<p className="text-[10px] text-orange-200/40 truncate mt-0.5">{user?.email}</p>
           </div>
-        </>
+
+          {/* Links */}
+          <div className="py-1.5">
+            <Link
+              href="/profile"
+              onClick={() => setOpen(false)}
+              className="flex items-center gap-3 px-4 py-2.5 text-sm text-white/70 hover:text-white hover:bg-white/5 transition-all duration-150"
+            >
+              <span>✏️</span>
+              <span>Edit Profile</span>
+            </Link>
+            <Link
+              href="/profile?tab=password"
+              onClick={() => setOpen(false)}
+              className="flex items-center gap-3 px-4 py-2.5 text-sm text-white/70 hover:text-white hover:bg-white/5 transition-all duration-150"
+            >
+              <span>🔒</span>
+              <span>Change Password</span>
+            </Link>
+            <Link
+              href="/orders"
+              onClick={() => setOpen(false)}
+              className="flex items-center gap-3 px-4 py-2.5 text-sm text-white/70 hover:text-white hover:bg-white/5 transition-all duration-150"
+            >
+              <span>📦</span>
+              <span>My Orders</span>
+            </Link>
+          </div>
+
+          {/* Sign out */}
+          <div className="border-t border-white/10 py-1.5">
+            <button
+              onClick={() => signOut({ callbackUrl: "/" })}
+              className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-400 hover:bg-red-500/10 transition-all duration-150"
+            >
+              <span>🚪</span>
+              <span>Sign Out</span>
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );

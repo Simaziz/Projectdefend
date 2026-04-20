@@ -1,60 +1,155 @@
-import { dbConnect } from "@/lib/mongodb";
-import Order from "@/models/Order";
-import { auth } from "@/auth";
-import { redirect } from "next/navigation";
-import { Suspense } from "react";
-import OrderClientWrapper from "./OrderClientWrapper";
+"use client";
 
-export const dynamic = 'force-dynamic';
+import { useEffect, useState } from "react";
+import { updateOrderStatus } from "../../actions/orders";
 
-export default async function AdminDashboard() {
-  const session = await auth();
-  if (!session) redirect("/login");
+interface Order {
+  _id: string;
+  userEmail: string;
+  phone: string;
+  address: string;
+  coffeeName: string;
+  quantity: number;
+  totalPrice: number;
+  status: string;
+  note?: string;
+}
 
-  await dbConnect();
-  
-  // Convert MongoDB documents to plain JSON objects for the Client Component
-  const orders = await Order.find({}).sort({ createdAt: -1 }).lean();
-  const serializedOrders = JSON.parse(JSON.stringify(orders));
+export default function StaffOrdersPage() {
+  const [orders, setOrders] = useState<Order[]>([]);
+
+  useEffect(() => {
+    fetch("/api/orders")
+      .then(res => res.json())
+      .then(data => setOrders(data));
+  }, []);
 
   return (
-    <main className="min-h-screen bg-[#fdfcfb] pb-20 font-sans">
-      {/* --- PREMIUM DASHBOARD HEADER --- */}
-      <div className="bg-[#1c1917] pt-16 pb-32 px-6 border-b border-white/5">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-end justify-between gap-8">
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-orange-500 shadow-[0_0_10px_rgba(249,115,22,0.8)] animate-pulse" />
-              <span className="text-orange-500 uppercase tracking-[0.4em] text-[10px] font-black">
-                Live Operations
-              </span>
-            </div>
-            <h1 className="text-4xl md:text-6xl font-serif text-white italic tracking-tight">
+    <main className="min-h-screen bg-[#fdfcfb] pb-20">
+
+      {/* 🔥 PREMIUM HEADER */}
+      <div className="bg-[#1c1917] pt-16 pb-32 px-6">
+        <div className="max-w-6xl mx-auto flex justify-between items-end">
+          <div>
+            <p className="text-orange-500 text-xs tracking-[0.3em] uppercase mb-2">
+              Live Operations
+            </p>
+            <h1 className="text-5xl font-serif italic text-white">
               Order Dispatch
             </h1>
           </div>
 
-          <div className="flex items-center gap-6 bg-white/5 backdrop-blur-2xl px-8 py-5 rounded-[2.5rem] border border-white/10 shadow-2xl">
-            <div className="text-center">
-              <p className="text-stone-500 text-[9px] font-black uppercase tracking-[0.2em] mb-1 text-white/50">Queue</p>
-              <p className="text-3xl font-serif text-white italic">{serializedOrders.length}</p>
-            </div>
-            <div className="w-[1px] h-10 bg-white/10" />
-            <div className="text-center">
-              <p className="text-stone-500 text-[9px] font-black uppercase tracking-[0.2em] mb-1 text-white/50">System</p>
-              <p className="text-[10px] font-black text-emerald-500 uppercase">Online</p>
-            </div>
+          <div className="bg-white/10 backdrop-blur-xl px-6 py-4 rounded-2xl border border-white/10">
+            <p className="text-white/50 text-xs">Queue</p>
+            <p className="text-2xl text-white font-serif">
+              {orders.length}
+            </p>
           </div>
         </div>
       </div>
 
-      {/* --- ANIMATED ORDERS LIST --- */}
-      {/* -mt-20 creates the professional layered overlap with the black header */}
-      <div className="max-w-7xl mx-auto px-6 -mt-20 relative z-10">
-        <Suspense fallback={<div className="h-64 bg-white rounded-[2.2rem] animate-pulse" />}>
-          <OrderClientWrapper initialOrders={serializedOrders} />
-        </Suspense>
+      {/* 🔥 FLOATING CARDS */}
+      <div className="max-w-6xl mx-auto px-6 -mt-24 space-y-6">
+
+        {orders.map(order => (
+          <OrderCard key={order._id} order={order} />
+        ))}
+
+        {orders.length === 0 && (
+          <div className="bg-white rounded-3xl p-16 text-center border">
+            <p className="text-gray-400 italic">
+              No orders yet...
+            </p>
+          </div>
+        )}
+
       </div>
+
     </main>
+  );
+}
+
+// ================= CARD =================
+
+function OrderCard({ order }: { order: Order }) {
+  const isDone = order.status === "completed";
+
+  return (
+    <div className={`rounded-3xl p-6 transition-all border ${
+      isDone 
+        ? "bg-gray-50 border-gray-100 opacity-70"
+        : "bg-white border-gray-200 shadow-xl hover:shadow-2xl"
+    }`}>
+
+      {/* TOP */}
+      <div className="flex justify-between items-center mb-4">
+        <div>
+          <p className="font-bold text-gray-900">{order.userEmail}</p>
+          <p className="text-xs text-gray-400">
+            {order.phone || "No phone"}
+          </p>
+        </div>
+
+        <div className="flex items-center gap-4">
+          <Status status={order.status} />
+
+          {!isDone && (
+            <form action={updateOrderStatus}>
+              <input type="hidden" name="orderId" value={order._id} />
+              <input type="hidden" name="status" value="completed" />
+
+              <button className="bg-black text-white px-6 py-2 rounded-xl text-xs uppercase tracking-widest hover:bg-gray-900 transition">
+                Complete
+              </button>
+            </form>
+          )}
+        </div>
+      </div>
+
+      {/* PRODUCT */}
+      <div className="flex justify-between items-center mb-4">
+        <div>
+          <p className="font-semibold text-gray-800">
+            {order.coffeeName}
+          </p>
+          <p className="text-xs text-gray-400">
+            Qty: {order.quantity}
+          </p>
+        </div>
+
+        <p className="font-bold text-lg">
+          ${order.totalPrice}
+        </p>
+      </div>
+
+      {/* ADDRESS */}
+      <div className="bg-gray-50 p-4 rounded-xl text-sm text-gray-600 mb-3">
+        {order.address || "Pickup"}
+      </div>
+
+      {/* NOTE */}
+      {order.note && (
+        <div className="bg-orange-50 p-4 rounded-xl text-sm text-gray-700">
+          “{order.note}”
+        </div>
+      )}
+
+    </div>
+  );
+}
+
+// ================= STATUS =================
+
+function Status({ status }: { status: string }) {
+  const isDone = status === "completed";
+
+  return (
+    <span className={`px-4 py-1 rounded-full text-xs font-bold ${
+      isDone 
+        ? "bg-green-100 text-green-600"
+        : "bg-orange-100 text-orange-600"
+    }`}>
+      {isDone ? "Completed" : "Pending"}
+    </span>
   );
 }

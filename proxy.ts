@@ -1,9 +1,8 @@
 import { auth } from "@/auth";
 import { NextRequest, NextResponse } from "next/server";
 
-// We define a custom interface to handle the auth property on the request
 interface AuthRequest extends NextRequest {
-  auth: any; 
+  auth: any;
 }
 
 export default auth((req: AuthRequest) => {
@@ -25,18 +24,18 @@ export default auth((req: AuthRequest) => {
     }
   }
 
+  // 3. Protect Staff Routes
+  if (nextUrl.pathname.startsWith("/staff")) {
+    if (!isLoggedIn || userRole !== "staff") {
+      return NextResponse.redirect(new URL("/403", nextUrl));
+    }
+  }
+
   return NextResponse.next();
 });
 
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except for the ones starting with:
-     * - api (API routes)
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     */
     "/((?!api|_next/static|_next/image|favicon.ico).*)",
   ],
 };

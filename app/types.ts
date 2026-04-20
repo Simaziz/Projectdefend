@@ -8,3 +8,5 @@ export type Coffee = {
   discount?: number;
   isTopDrink?: boolean;
 };
+
+export type UserRole = 'user' | 'admin' | 'staff';

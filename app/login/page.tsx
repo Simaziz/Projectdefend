@@ -8,6 +8,7 @@ import Link from "next/link";
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
@@ -20,70 +21,107 @@ export default function LoginPage() {
     const res = await signIn("credentials", {
       email,
       password,
-      redirect: false, // We handle the redirect manually
+      redirect: false,
     });
 
     if (res?.error) {
-      setError("Invalid email or password");
+      setError("Invalid email or password. Please try again.");
       setLoading(false);
     } else {
-      router.push("/"); // Redirect to home on success
-      router.refresh(); // Refresh navbar to show Admin/Logout buttons
+      router.push("/");
+      router.refresh();
     }
   };
 
   return (
-    <div className="flex items-center justify-center min-h-[80vh] px-4">
-      <div className="w-full max-w-md p-8 space-y-6 bg-white rounded-2xl shadow-xl border border-stone-100">
-        <div className="text-center">
-          <h1 className="text-3xl font-bold text-orange-950">Welcome Back</h1>
-          <p className="text-stone-500 mt-2">Log in to your Cozy Cup account</p>
-        </div>
+    <div className="min-h-screen bg-orange-950 flex items-center justify-center px-4">
+      {/* Background glow */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-orange-800/20 rounded-full blur-[120px]" />
+      </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {error && (
-            <div className="p-3 text-sm text-red-600 bg-red-50 rounded-lg border border-red-100">
-              {error}
+      <div className="relative w-full max-w-md">
+        {/* Card */}
+        <div className="rounded-3xl border border-white/10 bg-white/5 backdrop-blur-xl shadow-[0_30px_80px_-20px_rgba(0,0,0,0.6)] overflow-hidden">
+
+          {/* Header */}
+          <div className="px-8 pt-10 pb-6 border-b border-white/10 text-center">
+            <div className="w-14 h-14 bg-white/10 rounded-2xl flex items-center justify-center border border-white/20 mx-auto mb-4">
+              <span className="text-2xl">☕</span>
             </div>
-          )}
-          
-          <div>
-            <label className="block text-sm font-medium text-stone-700">Email Address</label>
-            <input
-              type="email"
-              required
-              className="w-full px-4 py-2 mt-1 border border-stone-200 rounded-lg focus:ring-2 focus:ring-orange-500 focus:outline-none"
-              placeholder="you@example.com"
-              onChange={(e) => setEmail(e.target.value)}
-            />
+            <h1 className="font-serif italic text-3xl text-white leading-none">Welcome Back</h1>
+            <p className="text-[11px] uppercase tracking-[0.3em] text-orange-200/40 mt-2">
+              Sign in to Cozy Cup
+            </p>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-stone-700">Password</label>
-            <input
-              type="password"
-              required
-              className="w-full px-4 py-2 mt-1 border border-stone-200 rounded-lg focus:ring-2 focus:ring-orange-500 focus:outline-none"
-              placeholder="••••••••"
-              onChange={(e) => setPassword(e.target.value)}
-            />
+          {/* Form */}
+          <div className="px-8 py-8">
+            <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+
+              {error && (
+                <div className="px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs">
+                  {error}
+                </div>
+              )}
+
+              {/* Email */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] uppercase tracking-[0.25em] font-black text-orange-200/60">
+                  Email Address
+                </label>
+                <input
+                  type="email"
+                  required
+                  value={email}
+                  placeholder="you@example.com"
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-white/20 focus:outline-none focus:border-orange-400/60 transition-all duration-200 w-full"
+                />
+              </div>
+
+              {/* Password */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] uppercase tracking-[0.25em] font-black text-orange-200/60">
+                  Password
+                </label>
+                <div className="relative">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    required
+                    value={password}
+                    placeholder="••••••••"
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="bg-white/5 border border-white/10 rounded-xl px-4 py-3 pr-12 text-sm text-white placeholder-white/20 focus:outline-none focus:border-orange-400/60 transition-all duration-200 w-full"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((s) => !s)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60 transition-colors text-lg"
+                  >
+                    {showPassword ? "🙈" : "👁️"}
+                  </button>
+                </div>
+              </div>
+
+              {/* Submit */}
+              <button
+                type="submit"
+                disabled={loading}
+                className="mt-2 w-full py-3 rounded-full text-[10px] font-black uppercase tracking-widest bg-orange-500 hover:bg-orange-400 text-white transition-all duration-300 active:scale-95 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {loading ? "Signing in…" : "Sign In"}
+              </button>
+            </form>
+
+            <p className="text-center text-xs text-white/30 mt-6">
+              Don't have an account?{" "}
+              <Link href="/register" className="text-orange-300 hover:text-orange-200 font-semibold transition-colors">
+                Create one
+              </Link>
+            </p>
           </div>
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full py-3 font-semibold text-white bg-orange-800 rounded-lg hover:bg-orange-900 transition-colors disabled:bg-stone-400"
-          >
-            {loading ? "Signing in..." : "Login"}
-          </button>
-        </form>
-
-        <p className="text-center text-sm text-stone-600">
-          Don't have an account?{" "}
-          <Link href="/register" className="font-semibold text-orange-800 hover:underline">
-            Join Now
-          </Link>
-        </p>
+        </div>
       </div>
     </div>
   );
