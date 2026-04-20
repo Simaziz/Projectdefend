@@ -8,22 +8,24 @@ export async function updateOrderStatus(formData: FormData) {
   await dbConnect();
 
   const orderId = formData.get("orderId")?.toString();
-  const status = formData.get("status")?.toString();
+  const status = formData.get("status")?.toString() || "completed";
 
-  if (!orderId) throw new Error("Missing orderId");
+  if (!orderId) {
+    throw new Error("Missing orderId");
+  }
 
   try {
     await Order.findByIdAndUpdate(orderId, {
-      status: status || "completed",
+      status,
     });
 
-    // 🔥 IMPORTANT: refresh BOTH dashboards
+    // 🔥 refresh UI everywhere
     revalidatePath("/staff/orders");
     revalidatePath("/admin/order");
     revalidatePath("/admin");
 
-  } catch (err) {
-    console.error(err);
+  } catch (error) {
+    console.error("Update failed:", error);
     throw new Error("Failed to update order");
   }
 }

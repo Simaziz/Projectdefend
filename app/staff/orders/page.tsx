@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { updateOrderStatus } from "../../actions/orders";
 import {
   Coffee,
   Phone,
@@ -26,39 +27,31 @@ export default function StaffOrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loadingId, setLoadingId] = useState<string | null>(null);
 
-  // FETCH ORDERS
   useEffect(() => {
     fetch("/api/orders")
       .then((res) => res.json())
       .then((data) => setOrders(data));
   }, []);
 
-  // COMPLETE ORDER (FIXED - NO SERVER ACTION BUG)
+  // ✅ FIXED: Server Action ONLY (NO fetch API)
   const completeOrder = async (orderId: string) => {
     setLoadingId(orderId);
 
     try {
-      const res = await fetch("/api/orders/update-status", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          orderId,
-          status: "completed",
-        }),
-      });
+      const formData = new FormData();
+      formData.append("orderId", orderId);
+      formData.append("status", "completed");
 
-      if (res.ok) {
-        // instant UI update
-        setOrders((prev) =>
-          prev.map((o) =>
-            o._id === orderId ? { ...o, status: "completed" } : o
-          )
-        );
-      }
-    } catch (err) {
-      console.error(err);
+      await updateOrderStatus(formData);
+
+      // instant UI update
+      setOrders((prev) =>
+        prev.map((o) =>
+          o._id === orderId ? { ...o, status: "completed" } : o
+        )
+      );
+    } catch (error) {
+      console.error(error);
     } finally {
       setLoadingId(null);
     }
@@ -103,7 +96,7 @@ export default function StaffOrdersPage() {
               }`}
             >
 
-              {/* TOP ROW */}
+              {/* TOP */}
               <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
 
                 {/* USER */}
@@ -203,7 +196,7 @@ export default function StaffOrdersPage() {
   );
 }
 
-/* STATUS BADGE */
+/* STATUS */
 function Status({ status }: { status: string }) {
   const isDone = status === "completed";
 
