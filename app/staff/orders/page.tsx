@@ -33,7 +33,6 @@ export default function StaffOrdersPage() {
       .then((data) => setOrders(data));
   }, []);
 
-  // ✅ FIXED: Server Action ONLY (NO fetch API)
   const completeOrder = async (orderId: string) => {
     setLoadingId(orderId);
 
@@ -44,28 +43,25 @@ export default function StaffOrdersPage() {
 
       await updateOrderStatus(formData);
 
-      // instant UI update
       setOrders((prev) =>
         prev.map((o) =>
           o._id === orderId ? { ...o, status: "completed" } : o
         )
       );
-    } catch (error) {
-      console.error(error);
     } finally {
       setLoadingId(null);
     }
   };
 
   return (
-    <main className="min-h-screen bg-[#fdfcfb] pb-20">
+    <main className="min-h-screen bg-[#f6f5f3] pb-20">
 
       {/* HEADER */}
       <div className="bg-[#1c1917] pt-16 pb-28 px-6">
         <div className="max-w-6xl mx-auto flex justify-between items-end">
           <div>
             <p className="text-orange-400 text-xs tracking-[0.3em] uppercase mb-2">
-              Staff Panel
+              Staff Dashboard
             </p>
             <h1 className="text-5xl font-serif italic text-white">
               Order Queue
@@ -79,116 +75,97 @@ export default function StaffOrdersPage() {
         </div>
       </div>
 
-      {/* ORDERS */}
-      <div className="max-w-6xl mx-auto px-6 -mt-24 space-y-6">
+      {/* GRID */}
+      <div className="max-w-6xl mx-auto px-6 -mt-20">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
 
-        {orders.map((order) => {
-          const isDone = order.status === "completed";
+          {orders.map((order) => {
+            const isDone = order.status === "completed";
 
-          return (
-            <div
-              key={order._id}
-              className={`rounded-[2.2rem] p-7 border transition-all
-              ${
-                isDone
-                  ? "bg-stone-50 border-stone-100 opacity-70"
-                  : "bg-white border-stone-200 shadow-lg hover:shadow-xl"
-              }`}
-            >
+            return (
+              <div
+                key={order._id}
+                className={`rounded-3xl p-6 border transition-all duration-300 hover:-translate-y-1
+                ${
+                  isDone
+                    ? "bg-white/70 border-stone-200 opacity-70"
+                    : "bg-white border-stone-200 shadow-lg hover:shadow-2xl"
+                }`}
+              >
 
-              {/* TOP */}
-              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+                {/* TOP USER */}
+                <div className="flex items-center justify-between mb-5">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-2xl bg-stone-100 flex items-center justify-center">
+                      <User size={16} className="text-stone-500" />
+                    </div>
 
-                {/* USER */}
-                <div className="flex items-center gap-4">
-                  <div className="w-11 h-11 rounded-2xl bg-stone-100 flex items-center justify-center">
-                    <User size={18} className="text-stone-500" />
+                    <div>
+                      <p className="text-sm font-bold text-stone-900">
+                        {order.userEmail}
+                      </p>
+                      <p className="text-[11px] text-stone-400 flex items-center gap-1">
+                        <Phone size={10} />
+                        {order.phone || "No phone"}
+                      </p>
+                    </div>
                   </div>
 
-                  <div>
-                    <p className="font-bold text-stone-900 text-sm">
-                      {order.userEmail}
-                    </p>
-                    <p className="text-[11px] text-stone-500 flex items-center gap-1">
-                      <Phone size={12} />
-                      {order.phone || "No phone"}
-                    </p>
-                  </div>
+                  <Status status={order.status} />
                 </div>
 
                 {/* COFFEE */}
-                <div className="flex items-center gap-4">
-                  <div className="relative p-3 rounded-2xl bg-orange-50 text-orange-600">
-                    <Coffee size={18} />
-                    <span className="absolute -top-2 -right-2 w-5 h-5 text-[10px] bg-stone-900 text-white rounded-full flex items-center justify-center">
-                      {order.quantity}
-                    </span>
+                <div className="flex items-center justify-between bg-orange-50 rounded-2xl p-4 mb-4">
+                  <div className="flex items-center gap-3">
+                    <Coffee className="text-orange-600" />
+                    <div>
+                      <p className="font-bold text-stone-800 text-sm">
+                        {order.coffeeName}
+                      </p>
+                      <p className="text-[11px] text-stone-500">
+                        Qty: {order.quantity}
+                      </p>
+                    </div>
                   </div>
 
-                  <div>
-                    <p className="font-bold text-stone-800 text-sm">
-                      {order.coffeeName}
-                    </p>
-                    <p className="text-xs text-stone-400">
-                      ${order.totalPrice}
-                    </p>
-                  </div>
+                  <p className="font-bold text-stone-900">
+                    ${order.totalPrice}
+                  </p>
                 </div>
-
-                {/* ACTION */}
-                <div className="flex items-center gap-3">
-                  <Status status={order.status} />
-
-                  {!isDone && (
-                    <button
-                      onClick={() => completeOrder(order._id)}
-                      disabled={loadingId === order._id}
-                      className="px-5 py-2.5 rounded-xl bg-stone-900 text-white text-[10px] font-bold uppercase tracking-widest hover:bg-black active:scale-95 transition disabled:opacity-50"
-                    >
-                      {loadingId === order._id ? "..." : "Complete"}
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              {/* BOTTOM */}
-              <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
 
                 {/* ADDRESS */}
-                <div className="flex items-start gap-3 bg-stone-50 p-4 rounded-2xl border border-stone-100">
+                <div className="flex items-start gap-2 text-sm text-stone-600 mb-3">
                   <MapPin size={14} className="text-orange-500 mt-1" />
-                  <div>
-                    <p className="text-[10px] uppercase font-bold text-stone-400">
-                      Address
-                    </p>
-                    <p className="text-sm text-stone-700">
-                      {order.address || "Pickup"}
-                    </p>
-                  </div>
+                  <p>{order.address || "Pickup"}</p>
                 </div>
 
                 {/* NOTE */}
                 {order.note && (
-                  <div className="flex items-start gap-3 bg-orange-50 p-4 rounded-2xl border border-orange-100">
-                    <Clock size={14} className="text-orange-500 mt-1" />
-                    <div>
-                      <p className="text-[10px] uppercase font-bold text-orange-400">
-                        Note
-                      </p>
-                      <p className="text-sm text-stone-800 italic">
-                        “{order.note}”
-                      </p>
-                    </div>
+                  <div className="bg-stone-50 p-3 rounded-xl text-xs text-stone-600 mb-4 italic">
+                    “{order.note}”
                   </div>
                 )}
-              </div>
-            </div>
-          );
-        })}
 
+                {/* BUTTON */}
+                {!isDone && (
+                  <button
+                    onClick={() => completeOrder(order._id)}
+                    disabled={loadingId === order._id}
+                    className="w-full py-2.5 rounded-xl bg-stone-900 text-white text-[10px] font-bold uppercase tracking-widest hover:bg-black transition active:scale-95 disabled:opacity-50"
+                  >
+                    {loadingId === order._id ? "Processing..." : "Complete Order"}
+                  </button>
+                )}
+              </div>
+            );
+          })}
+
+        </div>
+
+        {/* EMPTY */}
         {orders.length === 0 && (
-          <div className="bg-white rounded-3xl p-16 text-center border">
-            <p className="text-gray-400 italic">No orders yet...</p>
+          <div className="text-center mt-20 text-stone-400 italic">
+            No orders yet...
           </div>
         )}
       </div>
@@ -196,25 +173,21 @@ export default function StaffOrdersPage() {
   );
 }
 
-/* STATUS */
+/* STATUS BADGE */
 function Status({ status }: { status: string }) {
   const isDone = status === "completed";
 
   return (
     <div
-      className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest border
+      className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest flex items-center gap-1
       ${
         isDone
-          ? "bg-emerald-50 text-emerald-600 border-emerald-100"
-          : "bg-amber-50 text-amber-600 border-amber-100"
+          ? "bg-emerald-50 text-emerald-600"
+          : "bg-amber-50 text-amber-600"
       }`}
     >
-      {isDone ? (
-        <CheckCircle2 size={12} />
-      ) : (
-        <Clock size={12} className="animate-pulse" />
-      )}
-      {isDone ? "Completed" : "Pending"}
+      {isDone ? <CheckCircle2 size={12} /> : <Clock size={12} />}
+      {isDone ? "Done" : "Pending"}
     </div>
   );
 }
