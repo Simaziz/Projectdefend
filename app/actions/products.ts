@@ -2,19 +2,17 @@
 
 import { dbConnect } from '@/lib/mongodb';
 import Product from '@/models/Product';
-import Order from '@/models/Order';
 import cloudinary from '@/lib/cloudinary';
 import { revalidatePath } from 'next/cache';
-import { redirect } from 'next/navigation';
 
 // ─── ADD COFFEE ────────────────────────────────────────────────────────────────
 export async function addCoffee(prevState: any, formData: FormData) {
   await dbConnect();
 
-  const name      = formData.get("name") as string;
-  const price     = parseFloat(formData.get("price") as string);
-  const stock     = Number(formData.get("stock"));
-  const discount  = Number(formData.get("discount")) || 0;
+  const name       = formData.get("name") as string;
+  const price      = parseFloat(formData.get("price") as string);
+  const stock      = Number(formData.get("stock"));
+  const discount   = Number(formData.get("discount")) || 0;
   const isTopDrink = formData.get("isTopDrink") === "on";
 
   if (!name)  return { error: "Drink name is required." };
@@ -29,7 +27,10 @@ export async function addCoffee(prevState: any, formData: FormData) {
 
     const uploadResponse: any = await new Promise((resolve, reject) => {
       cloudinary.uploader.upload_stream(
-        { folder: "cozy-cup", transformation: [{ width: 600, height: 600, crop: "fill" }] },
+        {
+          folder: "cozy-cup",
+          transformation: [{ width: 600, height: 600, crop: "fill" }],
+        },
         (error, result) => (error ? reject(error) : resolve(result))
       ).end(buffer);
     });
@@ -45,13 +46,12 @@ export async function addCoffee(prevState: any, formData: FormData) {
 
     revalidatePath("/");
     revalidatePath("/menu");
-    revalidatePath("/admin");
-    revalidatePath("/admin/products");
+    revalidatePath("/staff/products");
 
     return { success: true, error: null };
 
   } catch (error) {
-    console.error("Add Error:", error);
+    console.error("Add Coffee Error:", error);
     return { success: false, error: "Failed to add product. Please try again." };
   }
 }
@@ -60,15 +60,15 @@ export async function addCoffee(prevState: any, formData: FormData) {
 export async function updateCoffee(prevState: any, formData: FormData) {
   await dbConnect();
 
-  const id        = formData.get("id") as string;
-  const name      = formData.get("name") as string;
-  const rawPrice  = parseFloat(formData.get("price") as string);
-  const price     = Math.round(rawPrice * 100) / 100;
-  const stock     = Number(formData.get("stock"));
-  const discount  = Number(formData.get("discount")) || 0;
+  const id         = formData.get("id") as string;
+  const name       = formData.get("name") as string;
+  const rawPrice   = parseFloat(formData.get("price") as string);
+  const price      = Math.round(rawPrice * 100) / 100;
+  const stock      = Number(formData.get("stock"));
+  const discount   = Number(formData.get("discount")) || 0;
   const isTopDrink = formData.get("isTopDrink") === "on";
-  const file      = formData.get("image") as File;
-  let   imageUrl  = formData.get("existingImage") as string;
+  const file       = formData.get("image") as File;
+  let   imageUrl   = formData.get("existingImage") as string;
 
   if (!id)   return { error: "Product ID is missing." };
   if (!name) return { error: "Drink name is required." };
@@ -81,7 +81,10 @@ export async function updateCoffee(prevState: any, formData: FormData) {
 
       const uploadResponse: any = await new Promise((resolve, reject) => {
         cloudinary.uploader.upload_stream(
-          { folder: "cozy-cup", transformation: [{ width: 600, height: 600, crop: "fill" }] },
+          {
+            folder: "cozy-cup",
+            transformation: [{ width: 600, height: 600, crop: "fill" }],
+          },
           (error, result) => (error ? reject(error) : resolve(result))
         ).end(buffer);
       });
@@ -100,13 +103,12 @@ export async function updateCoffee(prevState: any, formData: FormData) {
 
     revalidatePath("/");
     revalidatePath("/menu");
-    revalidatePath("/admin");
-    revalidatePath("/admin/products");
+    revalidatePath("/staff/products");
 
     return { success: true, error: null };
 
-  } catch (error) { 
-    console.error("Update Error:", error);
+  } catch (error) {
+    console.error("Update Coffee Error:", error);
     return { success: false, error: "Failed to update product." };
   }
 }
@@ -123,35 +125,27 @@ export async function deleteCoffee(formData: FormData): Promise<{ success: boole
 
     revalidatePath("/");
     revalidatePath("/menu");
-    revalidatePath("/admin");
-    revalidatePath("/admin/products");
+    revalidatePath("/staff/products");
 
     return { success: true };
 
   } catch (error) {
-    console.error("Delete Error:", error);
+    console.error("Delete Coffee Error:", error);
     return { success: false, error: "Failed to delete product." };
   }
 }
 
-// ─── UPDATE ORDER STATUS ───────────────────────────────────────────────────────
-export async function updateOrderStatus(formData: FormData): Promise<void> {
-  const orderId  = formData.get("orderId");
-  const newStatus = formData.get("status") || "completed";
-
-  if (!orderId) return;
+// ─── GET ALL PRODUCTS ──────────────────────────────────────────────────────────
+// NOTE: For Server Components only.
+// Client Components should use fetch("/api/products") instead.
+export async function getProducts() {
+  await dbConnect();
 
   try {
-    await dbConnect();
-
-    await Order.findByIdAndUpdate(orderId, { status: newStatus });
-
-    revalidatePath("/admin/order");
-    revalidatePath("/admin");
-    revalidatePath("/order");
-
+    const products = await Product.find().sort({ createdAt: -1 }).lean();
+    return JSON.parse(JSON.stringify(products));
   } catch (error) {
-    console.error("Failed to update order:", error);
-    throw new Error("Update failed.");
+    console.error("Get Products Error:", error);
+    return [];
   }
 }

@@ -1,4 +1,4 @@
-import type { NextConfig } from "next";
+import type { NextConfig } from 'next'
 
 const nextConfig: NextConfig = {
   images: {
@@ -6,16 +6,20 @@ const nextConfig: NextConfig = {
       {
         protocol: 'https',
         hostname: 'res.cloudinary.com',
-        pathname: '/**', // Allows all folders/images from Cloudinary
+        pathname: '/**',
       },
       {
         protocol: 'https',
         hostname: 'images.unsplash.com',
-        pathname: '/**', // Allows all images from Unsplash
+        pathname: '/**',
       },
     ],
   },
-  /* config options here */
-};
+  experimental: {
+    serverActions: {
+      bodySizeLimit: '5mb',
+    },
+  },
+}
 
-export default nextConfig;
+export default nextConfig
