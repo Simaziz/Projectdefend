@@ -1,10 +1,12 @@
+"use client"; 
+
 import Link from "next/link";
-import { auth } from "@/auth";
+import { useSession } from "next-auth/react"; // 2. Use the hook instead of auth()
 import UserMenu from "./UserMenu";
 import MenuLink from "./MenuLink";
 
-export default async function Navbar() {
-  const session = await auth();
+export default function Navbar() { // 3. Remove 'async'
+  const { data: session } = useSession(); // 4. Get session via hook
   const isAdmin = session?.user?.role === "admin";
 
   return (
