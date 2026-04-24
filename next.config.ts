@@ -1,6 +1,8 @@
+// next.config.ts
 import type { NextConfig } from 'next'
 
 const nextConfig: NextConfig = {
+  serverExternalPackages: ["mongoose", "mongodb", "bcryptjs"], // ← add this
   images: {
     remotePatterns: [
       {

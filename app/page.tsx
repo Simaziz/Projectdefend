@@ -6,10 +6,17 @@ import TopDiscount from "../app/components/TopDiscount";
 import { ShopStatusBanner } from "./components/ShopStatusBanner";
 import { Coffee } from "../app/types";
 import Link from "next/link";
+import { auth } from "@/auth";          // ← add
+import { redirect } from "next/navigation"; // ← add
 
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
+  // ✅ Redirect admin/staff away from homepage
+  const session = await auth();
+  if (session?.user?.role === "admin") redirect("/admin/dashboard");
+  if (session?.user?.role === "staff") redirect("/staff/dashboard");
+
   const coffees: Coffee[] = await getProducts(50);
 
   return (
