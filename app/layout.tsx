@@ -1,8 +1,8 @@
-"use client"; // Required to use usePathname
+"use client";
 
 import { usePathname } from "next/navigation";
 import { Providers } from "../app/components/Providers";
-import Navbar from "../app/components/Navbar"; 
+import Navbar from "../app/components/Navbar";
 import "./globals.css";
 import CartPanel from "./components/CartPanel";
 import CartFloat from "./components/CartFloat";
@@ -14,25 +14,23 @@ export default function RootLayout({
 }) {
   const pathname = usePathname();
 
-  // Define which paths should NOT show the user-facing UI
-  // This will hide them for /staff, /staff/Products, etc.
   const isStaffPage = pathname.startsWith("/staff");
+  const isAdminPage = pathname.startsWith("/admin");
+  const hideUserUI = isStaffPage || isAdminPage;
 
   return (
-    <html lang="en" className="light" style={{ colorScheme: 'light' }}>
+    <html lang="en" className="light" style={{ colorScheme: "light" }}>
       <body className="antialiased bg-white text-stone-900">
         <Providers>
-          {/* Only show User UI if we are NOT on a staff page */}
-          {!isStaffPage && <Navbar />}
-          
+          {!hideUserUI && <Navbar />}
+
           <main className="min-h-screen bg-white">
             {children}
 
-            {/* Only show Cart UI if we are NOT on a staff page */}
-            {!isStaffPage && (
+            {!hideUserUI && (
               <>
-                <CartPanel />   {/* ✅ slide-over panel */}
-                <CartFloat />   {/* ✅ floating button */}
+                <CartPanel />
+                <CartFloat />
               </>
             )}
           </main>

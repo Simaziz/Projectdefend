@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, Suspense } from "react";
+import { useState, useRef, Suspense, useEffect } from "react";  // ← added useEffect
 import { useSession } from "next-auth/react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Image from "next/image";
@@ -81,6 +81,11 @@ function ProfileTab({ user, onNameUpdate }: { user: any; onNameUpdate: (name: st
   const [saved, setSaved] = useState(false);
   const [nameError, setNameError] = useState("");
 
+  // ← Keep local name in sync if session loads after mount
+  useEffect(() => {
+    if (user?.name) setName(user.name);
+  }, [user?.name]);
+
   function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -138,7 +143,7 @@ function ProfileTab({ user, onNameUpdate }: { user: any; onNameUpdate: (name: st
         return;
       }
 
-      onNameUpdate(data.user.name); // update session display name
+      onNameUpdate(data.user.name);
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
     } catch {
@@ -290,7 +295,6 @@ function NotificationsTab() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    // TODO: PATCH /api/user/notifications  { prefs }
     await new Promise((r) => setTimeout(r, 600));
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
@@ -351,7 +355,6 @@ function DangerTab() {
                 Cancel
               </button>
               <button
-                // TODO: DELETE /api/user  then signOut()
                 className="px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest bg-red-600 hover:bg-red-500 text-white transition-all">
                 Yes, Delete
               </button>
@@ -371,6 +374,11 @@ function ProfilePageInner() {
   const [tab, setTab] = useState<TabKey>(
     (searchParams.get("tab") as TabKey) ?? "profile"
   );
+
+  // ← Force session re-sync on mount to pick up name after registration
+  useEffect(() => {
+    update();
+  }, []);
 
   const user = session?.user;
 
@@ -392,7 +400,6 @@ function ProfilePageInner() {
     router.replace(`/profile?tab=${key}`, { scroll: false });
   }
 
-  // Called after name saved — refreshes the session so navbar updates too
   async function handleNameUpdate(newName: string) {
     await update({ name: newName });
   }

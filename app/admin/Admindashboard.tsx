@@ -3,6 +3,7 @@
 // app/admin/AdminDashboard.tsx
 
 import { useState, useRef, useTransition, useEffect, useCallback } from "react";
+import { useSession, signOut } from "next-auth/react"; // ← add useSession, signOut
 import {
   Coffee, Plus, Settings, LogOut, Search, Bell,
   TrendingUp, ShoppingBag, DollarSign, AlertCircle, Menu,
@@ -308,8 +309,6 @@ function OrderCard({ order, onStatusChange }: {
     <div className={`bg-white rounded-2xl border shadow-sm overflow-hidden transition-all ${
       order.status === "pending" ? "border-amber-200" : "border-stone-100"
     }`}>
-
-      {/* Header */}
       <div className="px-4 py-3 flex items-center justify-between gap-3 border-b border-stone-50">
         <div className="flex items-center gap-2 min-w-0">
           {order.status === "pending" && (
@@ -329,7 +328,6 @@ function OrderCard({ order, onStatusChange }: {
         </span>
       </div>
 
-      {/* Customer info */}
       <div className="px-4 py-3 space-y-1.5 border-b border-stone-50">
         {order.customerName && (
           <div className="flex items-center gap-2">
@@ -357,7 +355,6 @@ function OrderCard({ order, onStatusChange }: {
         )}
       </div>
 
-      {/* Items */}
       <div className="px-4 py-3 space-y-1.5 border-b border-stone-50">
         {order.items?.map((item, i) => (
           <div key={i} className="flex items-center justify-between">
@@ -370,7 +367,6 @@ function OrderCard({ order, onStatusChange }: {
         ))}
       </div>
 
-      {/* Total + action buttons */}
       <div className="px-4 py-3 bg-stone-50 flex items-center justify-between gap-3">
         <div>
           <p className="text-[10px] text-stone-400 uppercase font-black tracking-wider">Total</p>
@@ -424,6 +420,12 @@ export default function AdminDashboard({
   initialOrders:   Order[];
   initialSettings: ShopSettings;
 }) {
+  const { data: session } = useSession(); // ← get session for name/email
+  const adminName  = session?.user?.name  ?? "Admin";
+  const adminEmail = session?.user?.email ?? "";
+  // First letter of name for the avatar circle
+  const adminInitial = adminName.charAt(0).toUpperCase();
+
   const [products, setProducts]             = useState<Product[]>(initialProducts);
   const [orders, setOrders]                 = useState<Order[]>(initialOrders);
   const [search, setSearch]                 = useState("");
@@ -443,7 +445,6 @@ export default function AdminDashboard({
     ...initialSettings,
   });
 
-  // ── Settings helpers ──────────────────────────────────────────────────────────
   const updateSetting = <K extends keyof ShopSettings>(key: K, value: ShopSettings[K]) =>
     setSettings((prev) => ({ ...prev, [key]: value }));
 
@@ -474,7 +475,6 @@ export default function AdminDashboard({
         : [...prev.closedDays, day],
     }));
 
-  // ── Fetch orders ──────────────────────────────────────────────────────────────
   const fetchOrders = useCallback(async () => {
     try {
       const res = await fetch("/api/orders", { cache: "no-store" });
@@ -485,19 +485,16 @@ export default function AdminDashboard({
     } catch { /* silent */ }
   }, []);
 
-  // ── Always poll every 5s regardless of active tab ────────────────────────────
   useEffect(() => {
-    fetchOrders(); // fetch immediately on mount
+    fetchOrders();
     const interval = setInterval(fetchOrders, 5000);
     return () => clearInterval(interval);
   }, [fetchOrders]);
 
-  // ── Also fetch immediately when switching to orders tab ───────────────────────
   useEffect(() => {
     if (activeNav === "orders") fetchOrders();
   }, [activeNav, fetchOrders]);
 
-  // ── Pusher real-time listener ─────────────────────────────────────────────────
   useEffect(() => {
     if (
       !process.env.NEXT_PUBLIC_PUSHER_KEY ||
@@ -514,11 +511,8 @@ export default function AdminDashboard({
           cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER!,
         });
         channel = pusher.subscribe("admin-orders");
-        channel.bind("new-order", () => {
-          // New order came in — fetch immediately
-          fetchOrders();
-        });
-      } catch { /* Pusher optional — polling is the fallback */ }
+        channel.bind("new-order", () => { fetchOrders(); });
+      } catch { /* Pusher optional */ }
     };
 
     setupPusher();
@@ -528,7 +522,6 @@ export default function AdminDashboard({
     };
   }, [fetchOrders]);
 
-  // ── Optimistic handlers ───────────────────────────────────────────────────────
   const handleSaveDone = (updated: Product) =>
     setProducts((prev) => {
       const exists = prev.find((p) => p._id === updated._id);
@@ -542,7 +535,6 @@ export default function AdminDashboard({
   const handleStatusChange = (id: string, status: string) =>
     setOrders((prev) => prev.map((o) => (o._id === id ? { ...o, status } : o)));
 
-  // ── Derived ───────────────────────────────────────────────────────────────────
   const filteredProducts = products.filter((p) =>
     p.name.toLowerCase().includes(search.toLowerCase())
   );
@@ -612,14 +604,23 @@ export default function AdminDashboard({
           ))}
         </nav>
 
+        {/* ── Sidebar footer: real name, email, logout ── */}
         <div className="px-3 py-4 border-t border-stone-800">
           <div className="flex items-center gap-3 px-3 py-2">
-            <div className="w-8 h-8 rounded-full bg-orange-500 flex items-center justify-center text-white text-xs font-black">A</div>
-            <div className="flex-1 min-w-0">
-              <p className="text-white text-xs font-bold truncate">Admin</p>
-              <p className="text-stone-500 text-[10px] truncate">{settings.shopEmail || "admin@brew.com"}</p>
+            <div className="w-8 h-8 rounded-full bg-orange-500 flex items-center justify-center text-white text-xs font-black shrink-0">
+              {adminInitial} {/* ← real initial instead of hardcoded "A" */}
             </div>
-            <button className="text-stone-500 hover:text-stone-300 transition-colors"><LogOut size={14} /></button>
+            <div className="flex-1 min-w-0">
+              <p className="text-white text-xs font-bold truncate">{adminName}</p>   {/* ← real name */}
+              <p className="text-stone-500 text-[10px] truncate">{adminEmail}</p>    {/* ← real email */}
+            </div>
+            <button
+              onClick={() => signOut({ callbackUrl: "/login" })} // ← logout works now
+              title="Sign out"
+              className="text-stone-500 hover:text-red-400 transition-colors"
+            >
+              <LogOut size={14} />
+            </button>
           </div>
         </div>
       </aside>
@@ -825,7 +826,6 @@ export default function AdminDashboard({
                 </p>
               </div>
 
-              {/* Mobile search */}
               <div className="relative sm:hidden">
                 <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" />
                 <input type="text" placeholder="Search name, phone, ID…" value={orderSearch} onChange={(e) => setOrderSearch(e.target.value)}
@@ -858,7 +858,6 @@ export default function AdminDashboard({
                 </div>
               )}
 
-              {/* Shop Status */}
               <div className="bg-white rounded-2xl border border-stone-100 shadow-sm overflow-hidden">
                 <div className="px-5 py-4 border-b border-stone-100">
                   <h2 className="font-black text-stone-900 text-sm flex items-center gap-2"><Store size={15} className="text-orange-500" /> Shop Status</h2>
@@ -876,7 +875,6 @@ export default function AdminDashboard({
                 </div>
               </div>
 
-              {/* Shop Info */}
               <div className="bg-white rounded-2xl border border-stone-100 shadow-sm overflow-hidden">
                 <div className="px-5 py-4 border-b border-stone-100">
                   <h2 className="font-black text-stone-900 text-sm flex items-center gap-2"><Store size={15} className="text-orange-500" /> Shop Information</h2>
@@ -912,7 +910,6 @@ export default function AdminDashboard({
                 </div>
               </div>
 
-              {/* Opening Hours */}
               <div className="bg-white rounded-2xl border border-stone-100 shadow-sm overflow-hidden">
                 <div className="px-5 py-4 border-b border-stone-100">
                   <h2 className="font-black text-stone-900 text-sm flex items-center gap-2"><AlarmClock size={15} className="text-orange-500" /> Opening Hours</h2>
@@ -952,7 +949,6 @@ export default function AdminDashboard({
                 </div>
               </div>
 
-              {/* Notifications */}
               <div className="bg-white rounded-2xl border border-stone-100 shadow-sm overflow-hidden">
                 <div className="px-5 py-4 border-b border-stone-100">
                   <h2 className="font-black text-stone-900 text-sm flex items-center gap-2"><Bell size={15} className="text-orange-500" /> Notifications & Alerts</h2>

@@ -4,14 +4,21 @@ import { redirect } from "next/navigation";
 export default async function StaffHomePage() {
   const session = await auth();
 
-  if (!session)                       redirect("/login");
+  console.log("SESSION:", session); // ✅ DEBUG HERE
+
+  if (!session) redirect("/login");
   if (session.user?.role !== "staff") redirect("/403");
 
-  const name  = session.user.name  ?? "Staff Member";
-  const role  = session.user.role  ?? "staff";
-  const email = session.user.email ?? "—";
-  const id    = session.user.id    ?? "—";
-  const image = session.user.image;
+  // ✅ Improved fallback (handles "", null, undefined)
+  const name =
+    session.user?.name?.trim() ||
+    session.user?.email?.split("@")[0] ||
+    "Staff Member";
+
+  const role = session.user?.role ?? "staff";
+  const email = session.user?.email ?? "—";
+  const id = session.user?.id ?? "—";
+  const image = session.user?.image;
 
   const initials = name
     .split(" ")
@@ -39,11 +46,13 @@ export default async function StaffHomePage() {
           {/* ── Banner ── */}
           <div
             className="flex flex-col items-center py-10 px-6 gap-4"
-            style={{ background: "linear-gradient(135deg, #2C1A0E 0%, #6B3F1F 100%)" }}
+            style={{
+              background:
+                "linear-gradient(135deg, #2C1A0E 0%, #6B3F1F 100%)",
+            }}
           >
-            {/* Avatar — photo or initials fallback */}
+            {/* Avatar */}
             {image ? (
-              // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={image}
                 alt={name}
@@ -60,7 +69,10 @@ export default async function StaffHomePage() {
             )}
 
             <div className="text-center">
-              <p className="text-xs tracking-widest mb-1" style={{ color: "#C49A6C" }}>
+              <p
+                className="text-xs tracking-widest mb-1"
+                style={{ color: "#C49A6C" }}
+              >
                 WELCOME BACK
               </p>
               <h1
@@ -86,9 +98,9 @@ export default async function StaffHomePage() {
           {/* ── Info rows ── */}
           <div className="px-6 py-6 flex flex-col gap-3">
             <InfoRow label="Full name" value={name} />
-            <InfoRow label="Email"     value={email} />
-            <InfoRow label="Role"      value={role} capitalize />
-            <InfoRow label="Staff ID"  value={id}   mono />
+            <InfoRow label="Email" value={email} />
+            <InfoRow label="Role" value={role} capitalize />
+            <InfoRow label="Staff ID" value={id} mono />
           </div>
 
           {/* ── Footer ── */}
@@ -128,7 +140,9 @@ function InfoRow({
         {label}
       </span>
       <span
-        className={`text-sm font-medium truncate max-w-[60%] text-right ${capitalize ? "capitalize" : ""}`}
+        className={`text-sm font-medium truncate max-w-[60%] text-right ${
+          capitalize ? "capitalize" : ""
+        }`}
         style={{
           color: "#1E1209",
           fontFamily: mono ? "monospace" : undefined,

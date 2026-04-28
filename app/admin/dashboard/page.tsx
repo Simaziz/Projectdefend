@@ -1,8 +1,9 @@
 "use client";
 
-// app/admin/page.tsx  ← rename/replace your current file with this
+// app/admin/page.tsx
 
 import { useState, useRef, useTransition, useEffect, useCallback } from "react";
+import { useSession, signOut } from "next-auth/react"; // ← added
 import {
   Coffee, Plus, Settings, LogOut, Search, Bell,
   TrendingUp, ShoppingBag, DollarSign, AlertCircle, Menu,
@@ -401,8 +402,12 @@ function OrderCard({ order, onStatusChange }: {
 }
 
 // ─── Main Dashboard ────────────────────────────────────────────────────────────
-// ✅ No props needed — fetches its own data via API
 export default function AdminDashboard() {
+  const { data: session } = useSession(); // ← get session
+  const adminName    = session?.user?.name  ?? "Admin";
+  const adminEmail   = session?.user?.email ?? "";
+  const adminInitial = adminName.charAt(0).toUpperCase();
+
   const [products, setProducts]             = useState<Product[]>([]);
   const [orders, setOrders]                 = useState<Order[]>([]);
   const [settings, setSettings]             = useState<ShopSettings>(DEFAULT_SETTINGS);
@@ -419,7 +424,6 @@ export default function AdminDashboard() {
   const [settingsError, setSettingsError]   = useState("");
   const [loading, setLoading]               = useState(true);
 
-  // ✅ Fetch products + settings on mount
   useEffect(() => {
     const init = async () => {
       try {
@@ -444,7 +448,6 @@ export default function AdminDashboard() {
     init();
   }, []);
 
-  // ─── Settings helpers ─────────────────────────────────────────────────────────
   const updateSetting = <K extends keyof ShopSettings>(key: K, value: ShopSettings[K]) =>
     setSettings((prev) => ({ ...prev, [key]: value }));
 
@@ -475,7 +478,6 @@ export default function AdminDashboard() {
         : [...prev.closedDays, day],
     }));
 
-  // ─── Fetch orders ─────────────────────────────────────────────────────────────
   const fetchOrders = useCallback(async () => {
     try {
       const res = await fetch("/api/orders", { cache: "no-store" });
@@ -496,7 +498,6 @@ export default function AdminDashboard() {
     if (activeNav === "orders") fetchOrders();
   }, [activeNav, fetchOrders]);
 
-  // ─── Pusher ───────────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!process.env.NEXT_PUBLIC_PUSHER_KEY || !process.env.NEXT_PUBLIC_PUSHER_CLUSTER) return;
     let pusher: any;
@@ -515,7 +516,6 @@ export default function AdminDashboard() {
     return () => { channel?.unbind_all(); pusher?.disconnect(); };
   }, [fetchOrders]);
 
-  // ─── Optimistic handlers ──────────────────────────────────────────────────────
   const handleSaveDone = (updated: Product) =>
     setProducts((prev) => {
       const exists = prev.find((p) => p._id === updated._id);
@@ -529,7 +529,6 @@ export default function AdminDashboard() {
   const handleStatusChange = (id: string, status: string) =>
     setOrders((prev) => prev.map((o) => (o._id === id ? { ...o, status } : o)));
 
-  // ─── Derived ──────────────────────────────────────────────────────────────────
   const filteredProducts = products.filter((p) =>
     p.name.toLowerCase().includes(search.toLowerCase())
   );
@@ -554,7 +553,6 @@ export default function AdminDashboard() {
     { id: "settings", label: "Settings", icon: Settings },
   ];
 
-  // ─── Loading state ────────────────────────────────────────────────────────────
   if (loading) {
     return (
       <div className="flex h-screen items-center justify-center bg-stone-100">
@@ -611,14 +609,23 @@ export default function AdminDashboard() {
           ))}
         </nav>
 
+        {/* ── Sidebar footer: real name, email, logout ── */}
         <div className="px-3 py-4 border-t border-stone-800">
           <div className="flex items-center gap-3 px-3 py-2">
-            <div className="w-8 h-8 rounded-full bg-orange-500 flex items-center justify-center text-white text-xs font-black">A</div>
-            <div className="flex-1 min-w-0">
-              <p className="text-white text-xs font-bold truncate">Admin</p>
-              <p className="text-stone-500 text-[10px] truncate">{settings.shopEmail || "admin@brew.com"}</p>
+            <div className="w-8 h-8 rounded-full bg-orange-500 flex items-center justify-center text-white text-xs font-black shrink-0">
+              {adminInitial} {/* ← real initial */}
             </div>
-            <button className="text-stone-500 hover:text-stone-300 transition-colors"><LogOut size={14} /></button>
+            <div className="flex-1 min-w-0">
+              <p className="text-white text-xs font-bold truncate">{adminName}</p>   {/* ← real name */}
+              <p className="text-stone-500 text-[10px] truncate">{adminEmail}</p>    {/* ← real email */}
+            </div>
+            <button
+              onClick={() => signOut({ callbackUrl: "/login" })} // ← logout works now
+              title="Sign out"
+              className="text-stone-500 hover:text-red-400 transition-colors"
+            >
+              <LogOut size={14} />
+            </button>
           </div>
         </div>
       </aside>
