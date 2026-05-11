@@ -1,16 +1,16 @@
-// models/Order.ts
+
 import mongoose, { Schema, models } from "mongoose";
 
-// Each item inside an order
+
 const OrderItemSchema = new Schema({
   productId: { type: Schema.Types.ObjectId, ref: "Product" },
   name:      { type: String, required: true },
   image:     { type: String, default: "" },
-  price:     { type: Number, required: true },  // unit price at time of purchase
+  price:     { type: Number, required: true },  
   quantity:  { type: Number, required: true, default: 1 },
 }, { _id: false });
 
-// The full order — one document per customer checkout
+
 const OrderSchema = new Schema(
   {
     userEmail:    { type: String, required: true },
@@ -26,7 +26,7 @@ const OrderSchema = new Schema(
       default: "pending",
     },
   },
-  { timestamps: true }  // adds createdAt + updatedAt automatically
+  { timestamps: true }  
 );
 
 const Order = models.Order || mongoose.model("Order", OrderSchema);

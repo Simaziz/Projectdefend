@@ -1,6 +1,6 @@
 import mongoose, { Schema, model, models } from "mongoose";
 
-// The "blueprint" for your coffee items
+
 const CoffeeSchema = new Schema({
   name: { 
     type: String, 
@@ -30,7 +30,7 @@ const CoffeeSchema = new Schema({
   },
 });
 
-// This prevents Mongoose from creating the model twice during Next.js Hot Reloads
+
 const Coffee = models.Coffee || model("Coffee", CoffeeSchema);
 
 export default Coffee;

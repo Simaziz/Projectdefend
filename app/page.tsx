@@ -6,13 +6,13 @@ import TopDiscount from "../app/components/TopDiscount";
 import { ShopStatusBanner } from "./components/ShopStatusBanner";
 import { Coffee } from "../app/types";
 import Link from "next/link";
-import { auth } from "@/auth";          // ← add
-import { redirect } from "next/navigation"; // ← add
+import { auth } from "@/auth";        
+import { redirect } from "next/navigation"; 
 
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
-  // ✅ Redirect admin/staff away from homepage
+ 
   const session = await auth();
   if (session?.user?.role === "admin") redirect("/admin/dashboard");
   if (session?.user?.role === "staff") redirect("/staff/dashboard");
@@ -22,12 +22,10 @@ export default async function HomePage() {
   return (
     <div className="flex flex-col">
 
-      {/* Shop Status — compact pill */}
       <div className="px-4 pt-4">
         <ShopStatusBanner />
       </div>
 
-      {/* Poster */}
       <div className="relative flex-1 pt-70 h-[300px]">
         <Image
           src="/images/Cozycup.png"
@@ -37,10 +35,9 @@ export default async function HomePage() {
         />
       </div>
 
-      {/* Top Drinks */}
+  
       <TopDrink products={coffees} />
 
-      {/* Top Discount */}
       <div
         className="grid justify-center"
         style={{
@@ -50,7 +47,7 @@ export default async function HomePage() {
         <TopDiscount products={coffees} />
       </div>
 
-      {/* All Menu */}
+  
       <div className="p-6 bg-[#fcfaf8]">
         <div className="flex justify-center mb-4">
           <Link
